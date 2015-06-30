@@ -18,8 +18,10 @@ package com.example.android.bluetoothchat;
 
 import android.app.ActionBar;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -58,8 +60,9 @@ public class BluetoothChatFragment extends Fragment {
 
     // Layout Views
     private ListView mConversationView;
-    private EditText mOutEditText;
-    private Button mSendButton;
+//    private EditText mOutEditText;
+//    private Button mSendButton;
+    private Button mShareButton;
 
     /**
      * Name of the connected device
@@ -149,8 +152,21 @@ public class BluetoothChatFragment extends Fragment {
     @Override
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         mConversationView = (ListView) view.findViewById(R.id.in);
-        mOutEditText = (EditText) view.findViewById(R.id.edit_text_out);
-        mSendButton = (Button) view.findViewById(R.id.button_send);
+//        mOutEditText = (EditText) view.findViewById(R.id.edit_text_out);
+//        mSendButton = (Button) view.findViewById(R.id.button_send);
+        mShareButton = (Button) view.findViewById(R.id.test_share_button);
+        mShareButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // If not already connected to a device, launch the DeviceListActivity to see devices and do scan
+                if(mChatService.getState() != BluetoothChatService.STATE_CONNECTED) {
+                    Intent serverIntent = new Intent(getActivity(), DeviceListActivity.class);
+                    startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
+                } else {
+                    sendDataDialog();
+                }
+            }
+        });
     }
 
     /**
@@ -165,20 +181,20 @@ public class BluetoothChatFragment extends Fragment {
         mConversationView.setAdapter(mConversationArrayAdapter);
 
         // Initialize the compose field with a listener for the return key
-        mOutEditText.setOnEditorActionListener(mWriteListener);
+//        mOutEditText.setOnEditorActionListener(mWriteListener);
 
         // Initialize the send button with a listener that for click events
-        mSendButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                // Send a message using content of the edit text widget
-                View view = getView();
-                if (null != view) {
-                    TextView textView = (TextView) view.findViewById(R.id.edit_text_out);
-                    String message = textView.getText().toString();
-                    sendMessage(message);
-                }
-            }
-        });
+//        mSendButton.setOnClickListener(new View.OnClickListener() {
+//            public void onClick(View v) {
+//                // Send a message using content of the edit text widget
+//                View view = getView();
+//                if (null != view) {
+//                    TextView textView = (TextView) view.findViewById(R.id.edit_text_out);
+//                    String message = textView.getText().toString();
+//                    sendMessage(message);
+//                }
+//            }
+//        });
 
         // Initialize the BluetoothChatService to perform bluetooth connections
         mChatService = new BluetoothChatService(getActivity(), mHandler);
@@ -219,7 +235,7 @@ public class BluetoothChatFragment extends Fragment {
 
             // Reset out string buffer to zero and clear the edit text field
             mOutStringBuffer.setLength(0);
-            mOutEditText.setText(mOutStringBuffer);
+//            mOutEditText.setText(mOutStringBuffer);
         }
     }
 
@@ -332,6 +348,7 @@ public class BluetoothChatFragment extends Fragment {
                 if (resultCode == Activity.RESULT_OK) {
                     connectDevice(data, true);
                 }
+                sendDataDialog();
                 break;
             case REQUEST_CONNECT_DEVICE_INSECURE:
                 // When DeviceListActivity returns with a device to connect
@@ -352,6 +369,37 @@ public class BluetoothChatFragment extends Fragment {
                     getActivity().finish();
                 }
         }
+    }
+
+    private void sendDataDialog() {
+        LayoutInflater li = LayoutInflater.from(getActivity());
+        View dialogView = li.inflate(R.layout.dialog_send_game_data, null);
+
+        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(getActivity());
+        dialogBuilder.setView(dialogView);
+
+        final EditText sendMessage = (EditText) dialogView.findViewById(R.id.dialog_message_out);
+
+        // Setup dialog buttons
+        dialogBuilder
+                .setCancelable(false)
+                .setPositiveButton("SEND", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        String message = sendMessage.getText().toString();
+                        sendMessage(message);
+                    }
+                })
+                .setNegativeButton("CANCEL", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialogInterface.cancel();
+                    }
+                });
+
+        // Create and show dialog
+        AlertDialog dialog = dialogBuilder.create();
+        dialog.show();
     }
 
     /**
